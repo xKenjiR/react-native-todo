@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -16,44 +17,74 @@ type Todo = {
   isDone: boolean;
 };
 
+const API_URL = "http://192.168.1.2:4000";
+
 export default function Index() {
   const [todoTitle, setTodoTitle] = useState("");
   const [todoList, setTodoList] = useState<Todo[]>([]);
 
-  const addTodo = () => {
-    if (todoTitle) {
-      setTodoList((state) => [
-        ...state,
-        {
-          id: state.length,
-          title: todoTitle,
-          isDone: false,
-        },
-      ]);
-      setTodoTitle("");
+  useEffect(() => {
+    fetchTodos();
+  }, []);
+
+  const fetchTodos = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/todos`);
+
+      const mapped = res.data.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        isDone: t.is_done,
+      }));
+      setTodoList(mapped);
+    } catch (err) {
+      console.error("Error fetching todos:", err);
     }
   };
 
-  const deleteTodo = (id: number) => {
-    setTodoList((state) => {
-      let counter = 0;
-      const newList: Todo[] = [];
-      state.forEach((item) => {
-        if (id != item.id) {
-          newList.push({ ...item, id: counter });
-          counter++;
-        }
-      });
-      return newList;
-    });
+
+  const addTodo = async () => {
+    if (todoTitle) {
+      try {
+        const res = await axios.post(`${API_URL}/todos`, { title: todoTitle });
+        const newTodo: Todo = {
+          id: res.data.id,
+          title: res.data.title,
+          isDone: res.data.is_done, 
+        };
+        setTodoList((prev) => [...prev, newTodo]);
+        setTodoTitle("");
+      } catch (err) {
+        console.error("Error adding todo:", err);
+      }
+    }
   };
 
-  const updateTodo = (id: number) => {
-    setTodoList((state) =>
-      state.map((item) =>
-        item.id === id ? { ...item, isDone: !item.isDone } : item
-      )
-    );
+
+
+
+
+  const deleteTodo = async (id: number) => {
+    try {
+      await axios.delete(`${API_URL}/todos/${id}`);
+      setTodoList(todoList.filter((t) => t.id !== id));
+    } catch (err) {
+      console.error("Error deleting todo:", err);
+    }
+  };
+
+  const updateTodo = async (id: number) => {
+    try {
+      const res = await axios.put(`${API_URL}/todos/${id}`);
+      const updated = {
+        id: res.data.id,
+        title: res.data.title,
+        isDone: res.data.is_done,
+      };
+      setTodoList(todoList.map((t) => (t.id === id ? updated : t)));
+    } catch (err) {
+      console.error("Error updating todo:", err);
+    }
   };
 
   return (
