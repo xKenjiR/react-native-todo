@@ -1,27 +1,22 @@
+import List from "@/components/list";
+import { useTodoList } from "@/store/store";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-type Todo = {
+export type Todo = {
   id: number;
   title: string;
   isDone: boolean;
 };
 
-const API_URL = "http://192.168.1.2:4000";
+const API_URL = "http://localhost:4000";
 
 export default function Index() {
   const [todoTitle, setTodoTitle] = useState("");
-  const [todoList, setTodoList] = useState<Todo[]>([]);
+  const { setList, addTodo } = useTodoList((state) => state);
 
   useEffect(() => {
     fetchTodos();
@@ -36,54 +31,16 @@ export default function Index() {
         title: t.title,
         isDone: t.is_done,
       }));
-      setTodoList(mapped);
+      setList(mapped);
     } catch (err) {
       console.error("Error fetching todos:", err);
     }
   };
 
-
-  const addTodo = async () => {
+  const addButton = async () => {
     if (todoTitle) {
-      try {
-        const res = await axios.post(`${API_URL}/todos`, { title: todoTitle });
-        const newTodo: Todo = {
-          id: res.data.id,
-          title: res.data.title,
-          isDone: res.data.is_done, 
-        };
-        setTodoList((prev) => [...prev, newTodo]);
-        setTodoTitle("");
-      } catch (err) {
-        console.error("Error adding todo:", err);
-      }
-    }
-  };
-
-
-
-
-
-  const deleteTodo = async (id: number) => {
-    try {
-      await axios.delete(`${API_URL}/todos/${id}`);
-      setTodoList(todoList.filter((t) => t.id !== id));
-    } catch (err) {
-      console.error("Error deleting todo:", err);
-    }
-  };
-
-  const updateTodo = async (id: number) => {
-    try {
-      const res = await axios.put(`${API_URL}/todos/${id}`);
-      const updated = {
-        id: res.data.id,
-        title: res.data.title,
-        isDone: res.data.is_done,
-      };
-      setTodoList(todoList.map((t) => (t.id === id ? updated : t)));
-    } catch (err) {
-      console.error("Error updating todo:", err);
+      addTodo(todoTitle);
+      setTodoTitle("");
     }
   };
 
@@ -96,26 +53,11 @@ export default function Index() {
           onChangeText={setTodoTitle}
           placeholder="Add todo..."
         />
-        <TouchableOpacity onPress={addTodo}>
+        <TouchableOpacity onPress={addButton}>
           <Ionicons name="add" style={styles.icon} />
         </TouchableOpacity>
       </View>
-      <FlatList
-        data={todoList}
-        keyExtractor={(todo) => todo.id.toString()}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => updateTodo(item.id)}>
-            <View style={item.isDone ? styles.itemsDone : styles.items}>
-              <Text style={styles.itemText}>
-                {item.isDone && "(Done)"} {item.title}
-              </Text>
-              <TouchableOpacity onPress={() => deleteTodo(item.id)}>
-                <Ionicons style={styles.delete} name="trash" />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        )}
-      />
+      <List />
     </SafeAreaView>
   );
 }
@@ -145,37 +87,5 @@ const styles = StyleSheet.create({
     color: "white",
     borderRadius: 5,
     backgroundColor: "dodgerblue",
-  },
-  items: {
-    padding: 10,
-    width: "100%",
-    borderRadius: 5,
-    marginBottom: 10,
-    backgroundColor: "white",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  itemsDone: {
-    padding: 10,
-    width: "100%",
-    borderRadius: 5,
-    marginBottom: 10,
-    backgroundColor: "white",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    opacity: 0.5,
-  },
-  itemText: {
-    maxWidth: "90%",
-    textAlign: "left",
-  },
-  delete: {
-    padding: 5,
-    fontSize: 15,
-    color: "white",
-    borderRadius: 5,
-    backgroundColor: "indianred",
   },
 });
